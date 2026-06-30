@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+  <meta name="theme-color" content="#000000">
+  <title>Eternal Guard - Tower Defense</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      overflow: hidden;
+      touch-action: none;
+      background: #000;
+      font-family: 'Arial', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #gameCanvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #topBar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: white;
+      font-size: 16px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+
+    #credits {
+      background: rgba(255, 215, 0, 0.3);
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: 2px solid gold;
+    }
+
+    #timer {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: 2px solid white;
+    }
+
+    #fps {
+      position: absolute;
+      top: 60px;
+      left: 10px;
+      color: lime;
+      font-size: 14px;
+      font-family: monospace;
+      text-shadow: 1px 1px 2px black;
+    }
+
+    #store {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      pointer-events: auto;
+    }
+
+    .character-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 80px;
+      height: 100px;
+      border-radius: 10px;
+      border: 3px solid rgba(255,255,255,0.5);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .character-card:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .character-card.assault {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .character-card.sniper {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .character-card.launcher {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .character-icon {
+      font-size: 32px;
+      margin-bottom: 5px;
+    }
+
+    .character-name {
+      font-size: 11px;
+      margin-bottom: 3px;
+    }
+
+    .character-cost {
+      font-size: 13px;
+      color: gold;
+    }
+
+    .character-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #startScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      pointer-events: auto;
+      z-index: 100;
+    }
+
+    #startScreen.hidden {
+      display: none;
+    }
+
+    #startScreen h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
+
+    #startScreen p {
+      font-size: 16px;
+      margin-bottom: 30px;
+      text-align: center;
+      padding: 0 20px;
+      line-height: 1.6;
+    }
+
+    #startButton {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s;
+    }
+
+    #startButton:active {
+      transform: scale(0.95);
+    }
+
+    #gameOverScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      pointer-events: auto;
+      z-index: 100;
+    }
+
+    #gameOverScreen.show {
+      display: flex;
+    }
+
+    #gameOverScreen h1 {
+      font-size: 48px;
+      color: #f5576c;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(245, 87, 108, 0.5);
+    }
+
+    .score-display {
+      font-size: 24px;
+      margin: 10px 0;
+    }
+
+    #restartButton {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      margin-top: 30px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s;
+    }
+
+    #restartButton:active {
+      transform: scale(0.95);
+    }
+
+    #upgradePopup {
+      position: absolute;
+      background: rgba(0,0,0,0.9);
+      border: 3px solid gold;
+      border-radius: 15px;
+      padding: 20px;
+      color: white;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      z-index: 50;
+    }
+
+    #upgradePopup.show {
+      display: flex;
+    }
+
+    #upgradeButton {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 10px 30px;
+      font-size: 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(245, 87, 108, 0.4);
+    }
+
+    #upgradeButton:active {
+      transform: scale(0.95);
+    }
+
+    #closeUpgrade {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      font-size: 14px;
+      border-radius: 15px;
+      cursor: pointer;
+    }
+
+    #pauseButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #pauseButton:active {
+      background: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  
+  <div id="ui">
+    <div id="topBar">
+      <div id="credits">💰 <span id="creditsValue">100</span></div>
+      <div id="timer">⏱️ <span id="timerValue">0:00</span></div>
+    </div>
+    <div id="fps">FPS: 60</div>
+    
+    <button id="pauseButton">⏸</button>
+
+    <div id="store">
+      <div class="character-card assault" data-type="assault">
+        <div class="character-icon">🔫</div>
+        <div class="character-name">アサルト</div>
+        <div class="character-cost">50</div>
+      </div>
+      <div class="character-card sniper" data-type="sniper">
+        <div class="character-icon">🎯</div>
+        <div class="character-name">スナイパー</div>
+        <div class="character-cost">100</div>
+      </div>
+      <div class="character-card launcher" data-type="launcher">
+        <div class="character-icon">💣</div>
+        <div class="character-name">ランチャー</div>
+        <div class="character-cost">150</div>
+      </div>
+    </div>
+
+    <div id="upgradePopup">
+      <h3 id="upgradeTitle">アップグレード</h3>
+      <p id="upgradeInfo">レベル: 1 → 2</p>
+      <p id="upgradeCost">コスト: 50</p>
+      <button id="upgradeButton">強化する</button>
+      <button id="closeUpgrade">閉じる</button>
+    </div>
+  </div>
+
+  <div id="startScreen">
+    <h1>🛡️ ETERNAL GUARD 🛡️</h1>
+    <p>
+      拠点を守り抜け！<br>
+      キャラクターをドラッグして配置<br>
+      時間経過で敵は無限に強くなる<br>
+      どこまで生き延びられるか？
+    </p>
+    <button id="startButton">ゲームスタート</button>
+  </div>
+
+  <div id="gameOverScreen">
+    <h1>GAME OVER</h1>
+    <div class="score-display">生存時間: <span id="finalTime">0:00</span></div>
+    <div class="score-display">ベストタイム: <span id="bestTime">0:00</span></div>
+    <button id="restartButton">リトライ</button>
+  </div>
+
+  <script>
+    // PWA対応用のmanifest.json生成
+    const manifestData = {
+      name: "Eternal Guard - Tower Defense",
+      short_name: "Eternal Guard",
+      start_url: "./",
+      display: "fullscreen",
+      background_color: "#000000",
+      theme_color: "#667eea",
+      orientation: "landscape",
+      icons: [
+        {
+          src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='130' font-size='100' text-anchor='middle' fill='white'>🛡️</text></svg>",
+          sizes: "192x192",
+          type: "image/svg+xml"
+        },
+        {
+          src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23667eea' width='512' height='512'/><text x='256' y='350' font-size='280' text-anchor='middle' fill='white'>🛡️</text></svg>",
+          sizes: "512x512",
+          type: "image/svg+xml"
+        }
+      ]
+    };
+
+    const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = manifestURL;
+    document.head.appendChild(manifestLink);
+
+    // Service Worker登録（簡易版）
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', (e) => {
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', (e) => {
+          self.clients.claim();
+        });
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(fetch(e.request));
+        });
+      `;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swURL = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swURL);
+    }
+
+    // ゲーム定数
+    const GAME_CONFIG = {
+      BASE_ENEMY_HP: 100,
+      BASE_ENEMY_SPEED: 1,
+      BASE_SPAWN_INTERVAL: 2000,
+      DIFFICULTY_INCREASE_INTERVAL: 60, // 60秒ごとに難易度上昇
+      HP_MULTIPLIER: 1.5,
+      SPEED_MULTIPLIER: 1.1,
+      SPAWN_MULTIPLIER: 0.9
+    };
+
+    const CHARACTER_TYPES = {
+      assault: {
+        name: 'アサルト',
+        cost: 50,
+        damage: 20,
+        range: 150,
+        fireRate: 500,
+        color: '#f5576c',
+        icon: '🔫',
+        upgradeCost: 50
+      },
+      sniper: {
+        name: 'スナイパー',
+        cost: 100,
+        damage: 80,
+        range: 300,
+        fireRate: 2000,
+        color: '#00f2fe',
+        icon: '🎯',
+        upgradeCost: 100
+      },
+      launcher: {
+        name: 'ランチャー',
+        cost: 150,
+        damage: 50,
+        range: 200,
+        fireRate: 1500,
+        color: '#fee140',
+        icon: '💣',
+        splashRadius: 80,
+        upgradeCost: 150
+      }
+    };
+
+    // Canvas設定
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ゲーム状態
+    let gameState = {
+      running: false,
+      paused: false,
+      credits: 100,
+      gameTime: 0,
+      base: { x: 50, y: canvas.height / 2, radius: 30, hp: 100, maxHp: 100 },
+      characters: [],
+      enemies: [],
+      projectiles: [],
+      particles: [],
+      lastSpawn: 0,
+      highScore: localStorage.getItem('highScore') || 0,
+      selectedCharacter: null,
+      dragging: null
+    };
+
+    // FPS計測
+    let fps = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = Date.now();
+
+    // オブジェクトプール（パフォーマンス最適化）
+    const particlePool = [];
+    const projectilePool = [];
+
+    function getParticle() {
+      return particlePool.pop() || {};
+    }
+
+    function releaseParticle(particle) {
+      particlePool.push(particle);
+    }
+
+    // パーティクル生成
+    function createParticles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 1;
+        const particle = getParticle();
+        Object.assign(particle, {
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          color,
+          size: Math.random() * 3 + 2
+        });
+        gameState.particles.push(particle);
+      }
+    }
+
+    // 敵生成
+    function spawnEnemy() {
+      const difficultyFactor = Math.floor(gameState.gameTime / GAME_CONFIG.DIFFICULTY_INCREASE_INTERVAL);
+      const hpMultiplier = Math.pow(GAME_CONFIG.HP_MULTIPLIER, difficultyFactor);
+      const speedMultiplier = Math.pow(GAME_CONFIG.SPEED_MULTIPLIER, difficultyFactor);
+      
+      const enemy = {
+        x: canvas.width + 30,
+        y: Math.random() * (canvas.height - 100) + 50,
+        radius: 15,
+        hp: GAME_CONFIG.BASE_ENEMY_HP * hpMultiplier,
+        maxHp: GAME_CONFIG.BASE_ENEMY_HP * hpMultiplier,
+        speed: GAME_CONFIG.BASE_ENEMY_SPEED * speedMultiplier,
+        color: `hsl(${Math.random() * 60}, 70%, 50%)`,
+        value: 10 + difficultyFactor * 5
+      };
+      
+      gameState.enemies.push(enemy);
+    }
+
+    // キャラクター配置
+    function placeCharacter(type, x, y) {
+      const charType = CHARACTER_TYPES[type];
+      if (gameState.credits < charType.cost) return false;
+      
+      // 配置可能範囲チェック（拠点から離れている、他のキャラと重ならない）
+      const minDistFromBase = 80;
+      const distFromBase = Math.hypot(x - gameState.base.x, y - gameState.base.y);
+      if (distFromBase < minDistFromBase) return false;
+
+      for (let char of gameState.characters) {
+        const dist = Math.hypot(x - char.x, y - char.y);
+        if (dist < 60) return false;
+      }
+      
+      gameState.credits -= charType.cost;
+      gameState.characters.push({
+        x,
+        y,
+        type,
+        ...charType,
+        lastFire: 0,
+        level: 1,
+        target: null
+      });
+      
+      createParticles(x, y, 10, charType.color);
+      return true;
+    }
+
+    // キャラクターアップグレード
+    function upgradeCharacter(character) {
+      if (gameState.credits < character.upgradeCost) return false;
+      
+      gameState.credits -= character.upgradeCost;
+      character.level++;
+      character.damage *= 1.5;
+      character.range *= 1.2;
+      character.upgradeCost = Math.floor(character.upgradeCost * 1.5);
+      
+      createParticles(character.x, character.y, 20, '#FFD700');
+      return true;
+    }
+
+    // 更新処理
+    function update(deltaTime) {
+      if (!gameState.running || gameState.paused) return;
+      
+      gameState.gameTime += deltaTime / 1000;
+      
+      // 敵のスポーン
+      const difficultyFactor = Math.floor(gameState.gameTime / GAME_CONFIG.DIFFICULTY_INCREASE_INTERVAL);
+      const spawnInterval = GAME_CONFIG.BASE_SPAWN_INTERVAL * Math.pow(GAME_CONFIG.SPAWN_MULTIPLIER, difficultyFactor);
+      
+      if (Date.now() - gameState.lastSpawn > spawnInterval) {
+        spawnEnemy();
+        gameState.lastSpawn = Date.now();
+      }
+      
+      // 敵の移動
+      for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+        const enemy = gameState.enemies[i];
+        const dx = gameState.base.x - enemy.x;
+        const dy = gameState.base.y - enemy.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist > gameState.base.radius + enemy.radius) {
+          enemy.x += (dx / dist) * enemy.speed;
+          enemy.y += (dy / dist) * enemy.speed;
+        } else {
+          // 拠点にダメージ
+          gameState.base.hp -= 10;
+          gameState.enemies.splice(i, 1);
+          createParticles(enemy.x, enemy.y, 15, '#ff0000');
+          
+          if (gameState.base.hp <= 0) {
+            gameOver();
+          }
+        }
+      }
+      
+      // キャラクターの攻撃
+      const now = Date.now();
+      for (let char of gameState.characters) {
+        // ターゲット探索
+        let closestEnemy = null;
+        let closestDist = char.range;
+        
+        for (let enemy of gameState.enemies) {
+          const dist = Math.hypot(enemy.x - char.x, enemy.y - char.y);
+          if (dist < closestDist) {
+            closestEnemy = enemy;
+            closestDist = dist;
+          }
+        }
+        
+        char.target = closestEnemy;
+        
+        // 発射
+        if (char.target && now - char.lastFire > char.fireRate) {
+          char.lastFire = now;
+          
+          const projectile = {
+            x: char.x,
+            y: char.y,
+            target: char.target,
+            damage: char.damage,
+            speed: 5,
+            color: char.color,
+            splashRadius: char.splashRadius || 0,
+            size: char.splashRadius ? 8 : 4
+          };
+          
+          gameState.projectiles.push(projectile);
+          createParticles(char.x, char.y, 3, char.color);
+        }
+      }
+      
+      // 弾の移動
+      for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+        const proj = gameState.projectiles[i];
+        
+        if (!proj.target || proj.target.hp <= 0) {
+          gameState.projectiles.splice(i, 1);
+          continue;
+        }
+        
+        const dx = proj.target.x - proj.x;
+        const dy = proj.target.y - proj.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < 10) {
+          // ヒット
+          if (proj.splashRadius > 0) {
+            // 範囲ダメージ
+            for (let enemy of gameState.enemies) {
+              const splashDist = Math.hypot(enemy.x - proj.x, enemy.y - proj.y);
+              if (splashDist < proj.splashRadius) {
+                enemy.hp -= proj.damage;
+                if (enemy.hp <= 0) {
+                  killEnemy(enemy);
+                }
+              }
+            }
+            createParticles(proj.x, proj.y, 30, proj.color);
+          } else {
+            proj.target.hp -= proj.damage;
+            if (proj.target.hp <= 0) {
+              killEnemy(proj.target);
+            }
+            createParticles(proj.x, proj.y, 8, proj.color);
+          }
+          
+          gameState.projectiles.splice(i, 1);
+        } else {
+          proj.x += (dx / dist) * proj.speed;
+          proj.y += (dy / dist) * proj.speed;
+        }
+      }
+      
+      // パーティクル更新
+      for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const p = gameState.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.02;
+        
+        if (p.life <= 0) {
+          releaseParticle(p);
+          gameState.particles.splice(i, 1);
+        }
+      }
+      
+      // UI更新
+      document.getElementById('creditsValue').textContent = Math.floor(gameState.credits);
+      const minutes = Math.floor(gameState.gameTime / 60);
+      const seconds = Math.floor(gameState.gameTime % 60);
+      document.getElementById('timerValue').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      // ストアカード有効/無効
+      document.querySelectorAll('.character-card').forEach(card => {
+        const type = card.dataset.type;
+        const cost = CHARACTER_TYPES[type].cost;
+        if (gameState.credits < cost) {
+          card.classList.add('disabled');
+        } else {
+          card.classList.remove('disabled');
+        }
+      });
+    }
+
+    function killEnemy(enemy) {
+      const index = gameState.enemies.indexOf(enemy);
+      if (index > -1) {
+        gameState.enemies.splice(index, 1);
+        gameState.credits += enemy.value;
+        createParticles(enemy.x, enemy.y, 20, enemy.color);
+      }
+    }
+
+    // 描画処理
+    function draw() {
+      // 背景
+      ctx.fillStyle = 'rgba(26, 26, 46, 0.3)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 拠点
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#4facfe';
+      ctx.fillStyle = '#4facfe';
+      ctx.beginPath();
+      ctx.arc(gameState.base.x, gameState.base.y, gameState.base.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // HP バー
+      const hpPercent = gameState.base.hp / gameState.base.maxHp;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(gameState.base.x - 30, gameState.base.y - 50, 60, 8);
+      ctx.fillStyle = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.25 ? '#ffff00' : '#ff0000';
+      ctx.fillRect(gameState.base.x - 30, gameState.base.y - 50, 60 * hpPercent, 8);
+      
+      // キャラクター
+      for (let char of gameState.characters) {
+        // 選択中のキャラは射程範囲を表示
+        if (gameState.selectedCharacter === char) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.arc(char.x, char.y, char.range, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = char.color;
+        ctx.fillStyle = char.color;
+        ctx.beginPath();
+        ctx.arc(char.x, char.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // アイコン
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(char.icon, char.x, char.y);
+        
+        // レベル表示
+        if (char.level > 1) {
+          ctx.fillStyle = '#FFD700';
+          ctx.font = 'bold 12px Arial';
+          ctx.fillText(`Lv${char.level}`, char.x, char.y - 30);
+        }
+        
+        // ターゲットへのライン
+        if (char.target) {
+          ctx.strokeStyle = char.color + '44';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(char.x, char.y);
+          ctx.lineTo(char.target.x, char.target.y);
+          ctx.stroke();
+        }
+      }
+      
+      // 敵
+      for (let enemy of gameState.enemies) {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = enemy.color;
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // HPバー
+        const hpPercent = enemy.hp / enemy.maxHp;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(enemy.x - 15, enemy.y - 25, 30, 4);
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(enemy.x - 15, enemy.y - 25, 30 * hpPercent, 4);
+      }
+      
+      // 弾
+      for (let proj of gameState.projectiles) {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = proj.color;
+        ctx.fillStyle = proj.color;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      // パーティクル
+      for (let p of gameState.particles) {
+        ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // ドラッグ中のキャラクター
+      if (gameState.dragging) {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = gameState.dragging.color;
+        ctx.fillStyle = gameState.dragging.color;
+        ctx.beginPath();
+        ctx.arc(gameState.dragging.x, gameState.dragging.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // 配置可能範囲
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(gameState.dragging.x, gameState.dragging.y, gameState.dragging.range, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // ゲームループ
+    let lastTime = Date.now();
+    function gameLoop() {
+      const now = Date.now();
+      const deltaTime = now - lastTime;
+      lastTime = now;
+      
+      update(deltaTime);
+      draw();
+      
+      // FPS計測
+      frameCount++;
+      if (now - lastFpsUpdate > 1000) {
+        fps = frameCount;
+        document.getElementById('fps').textContent = `FPS: ${fps}`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+      
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ゲーム開始
+    function startGame() {
+      document.getElementById('startScreen').classList.add('hidden');
+      gameState.running = true;
+      gameState.paused = false;
+      gameState.credits = 100;
+      gameState.gameTime = 0;
+      gameState.base.hp = gameState.base.maxHp;
+      gameState.characters = [];
+      gameState.enemies = [];
+      gameState.projectiles = [];
+      gameState.particles = [];
+      gameState.lastSpawn = Date.now();
+      
+      // フルスクリーン
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+
+    // ゲームオーバー
+    function gameOver() {
+      gameState.running = false;
+      
+      const minutes = Math.floor(gameState.gameTime / 60);
+      const seconds = Math.floor(gameState.gameTime % 60);
+      const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      document.getElementById('finalTime').textContent = timeString;
+      
+      if (gameState.gameTime > gameState.highScore) {
+        gameState.highScore = gameState.gameTime;
+        localStorage.setItem('highScore', gameState.highScore);
+      }
+      
+      const bestMinutes = Math.floor(gameState.highScore / 60);
+      const bestSeconds = Math.floor(gameState.highScore % 60);
+      const bestTimeString = `${bestMinutes}:${bestSeconds.toString().padStart(2, '0')}`;
+      document.getElementById('bestTime').textContent = bestTimeString;
+      
+      document.getElementById('gameOverScreen').classList.add('show');
+    }
+
+    // タッチ/マウスイベント
+    let touchStartPos = null;
+    let draggedType = null;
+
+    function handleStart(e) {
+      e.preventDefault();
+      const touch = e.touches ? e.touches[0] : e;
+      const x = touch.clientX;
+      const y = touch.clientY;
+      
+      // ストアのカードタッチ判定
+      const target = e.target.closest('.character-card');
+      if (target && !target.classList.contains('disabled')) {
+        draggedType = target.dataset.type;
+        const charType = CHARACTER_TYPES[draggedType];
+        gameState.dragging = {
+          x,
+          y,
+          type: draggedType,
+          ...charType
+        };
+        return;
+      }
+      
+      // キャラクタータップ判定
+      for (let char of gameState.characters) {
+        const dist = Math.hypot(x - char.x, y - char.y);
+        if (dist < 30) {
+          gameState.selectedCharacter = char;
+          showUpgradePopup(char, x, y);
+          return;
+        }
+      }
+      
+      gameState.selectedCharacter = null;
+      hideUpgradePopup();
+    }
+
+    function handleMove(e) {
+      e.preventDefault();
+      if (gameState.dragging) {
+        const touch = e.touches ? e.touches[0] : e;
+        gameState.dragging.x = touch.clientX;
+        gameState.dragging.y = touch.clientY;
+      }
+    }
+
+    function handleEnd(e) {
+      e.preventDefault();
+      if (gameState.dragging) {
+        const success = placeCharacter(
+          gameState.dragging.type,
+          gameState.dragging.x,
+          gameState.dragging.y
+        );
+        gameState.dragging = null;
+        draggedType = null;
+      }
+    }
+
+    canvas.addEventListener('touchstart', handleStart, { passive: false });
+    canvas.addEventListener('touchmove', handleMove, { passive: false });
+    canvas.addEventListener('touchend', handleEnd, { passive: false });
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+
+    // アップグレードポップアップ
+    function showUpgradePopup(char, x, y) {
+      const popup = document.getElementById('upgradePopup');
+      popup.style.left = x + 'px';
+      popup.style.top = (y - 150) + 'px';
+      popup.classList.add('show');
+      
+      document.getElementById('upgradeTitle').textContent = `${char.name} アップグレード`;
+      document.getElementById('upgradeInfo').textContent = `レベル: ${char.level} → ${char.level + 1}`;
+      document.getElementById('upgradeCost').textContent = `コスト: ${char.upgradeCost}`;
+      
+      const upgradeBtn = document.getElementById('upgradeButton');
+      upgradeBtn.onclick = () => {
+        if (upgradeCharacter(char)) {
+          hideUpgradePopup();
+        }
+      };
+      
+      if (gameState.credits < char.upgradeCost) {
+        upgradeBtn.style.opacity = '0.5';
+        upgradeBtn.style.cursor = 'not-allowed';
+      } else {
+        upgradeBtn.style.opacity = '1';
+        upgradeBtn.style.cursor = 'pointer';
+      }
+    }
+
+    function hideUpgradePopup() {
+      document.getElementById('upgradePopup').classList.remove('show');
+    }
+
+    document.getElementById('closeUpgrade').addEventListener('click', hideUpgradePopup);
+
+    // ボタンイベント
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', () => {
+      document.getElementById('gameOverScreen').classList.remove('show');
+      startGame();
+    });
+
+    document.getElementById('pauseButton').addEventListener('click', () => {
+      gameState.paused = !gameState.paused;
+      document.getElementById('pauseButton').textContent = gameState.paused ? '▶️' : '⏸';
+    });
+
+    // ゲームループ開始
+    gameLoop();
+
+    // ページ離脱時の警告
+    window.addEventListener('beforeunload', (e) => {
+      if (gameState.running) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    console.log('🎮 Eternal Guard - Tower Defense');
+    console.log('📱 PWA対応完了');
+    console.log('🎯 GitHub Pagesにアップロードしてホーム画面に追加できます');
+  </script>
+</body>
+</html>
